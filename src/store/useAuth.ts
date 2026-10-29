@@ -3,6 +3,7 @@ import { fetchAuthSession, getCurrentUser, signOut as amplifySignOut } from "aws
 import { Hub } from "aws-amplify/utils";
 import { useCallback, useEffect, useState } from "react";
 import { backendConfigured } from "./backend.ts";
+import { localMode, onLocalUserChange, readLocalUser, setLocalUser } from "./localMode.ts";
 
 export interface AuthUser {
   /** Cognito user id (sub). Links to players[].userId. */
@@ -36,10 +37,21 @@ async function readUser(): Promise<AuthUser | null> {
   }
 }
 
+function localState(): AuthState {
+  const user = readLocalUser();
+  return user ? { status: "signedIn", user } : { status: "signedOut" };
+}
+
+function initialState(): AuthState {
+  if (localMode) return localState();
+  return backendConfigured ? { status: "loading" } : { status: "unconfigured" };
+}
+
 export function useAuth(): AuthState & { signOut(): Promise<void> } {
-  const [state, setState] = useState<AuthState>(backendConfigured ? { status: "loading" } : { status: "unconfigured" });
+  const [state, setState] = useState<AuthState>(initialState);
 
   useEffect(() => {
+    if (localMode) return onLocalUserChange(() => setState(localState()));
     if (!backendConfigured) return;
     let live = true;
     const refresh = () => {
@@ -58,6 +70,7 @@ export function useAuth(): AuthState & { signOut(): Promise<void> } {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (localMode) return setLocalUser(null);
     await amplifySignOut();
   }, []);
 

@@ -9,6 +9,7 @@ import { JoinScreen } from "./components/account/JoinScreen.tsx";
 import { NewCampaignScreen } from "./components/account/NewCampaignScreen.tsx";
 import { PublicHeader } from "./components/account/PublicHeader.tsx";
 import { SignInScreen } from "./components/account/SignInScreen.tsx";
+import { LocalSignInScreen } from "./components/account/LocalSignInScreen.tsx";
 import { ViewAsProvider } from "./components/account/ViewAs.tsx";
 import { DeckTab } from "./components/DeckTab.tsx";
 import { FactionsTab } from "./components/FactionsTab.tsx";
@@ -23,6 +24,7 @@ import { RulesTab } from "./components/RulesTab.tsx";
 import { TurnGuideTab } from "./components/turnGuide/TurnGuideTab.tsx";
 import { WarRoomTab } from "./components/WarRoomTab.tsx";
 import { useAuth } from "./store/useAuth.ts";
+import { localMode } from "./store/localMode.ts";
 import type { AuthUser } from "./store/useAuth.ts";
 import { useCampaign } from "./store/useCampaign.ts";
 import { isPublicTab, isReferencePage, isTabId, readCampaignStartTab, readPublicStartTab, readReferencePage, REFERENCE_PAGE_IDS, saveReferencePage, saveTab } from "./store/useDevicePrefs.ts";
@@ -293,7 +295,7 @@ export default function App() {
     if (auth.status === "loading") return <Plain>Loading…</Plain>;
     return (
       <div className="wrap">
-        <SignInScreen onBack={toPublic} />
+        {localMode ? <LocalSignInScreen onBack={toPublic} /> : <SignInScreen onBack={toPublic} />}
       </div>
     );
   }

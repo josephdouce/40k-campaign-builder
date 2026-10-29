@@ -19,6 +19,23 @@ claude
 
 The original kick-off prompt is in `docs/kickoff-prompt.md`; the agreed plan is in `docs/plan.md`.
 
+## Local dev without AWS
+
+```
+npm install
+npm run dev:local
+```
+
+Runs the whole app with no AWS account or `amplify_outputs.json`:
+
+- **Sign-in** is a "pick who you are" screen (Organiser, Player 1, Player 2, or any email).
+  Each browser tab can be a different person, so open two tabs to play both sides.
+- **Campaigns** are saved in this browser's localStorage, with the same access rules and
+  version checks as the real backend. Changes show up live in your other tabs.
+- **Yellowscribe export** runs the Lambda's handler inside the Vite dev server.
+
+`npm run dev` and production builds are unchanged. To start fresh, clear the site's storage.
+
 ## What's in here
 
 - `CLAUDE.md`: the project brief. Claude Code reads it automatically every session,

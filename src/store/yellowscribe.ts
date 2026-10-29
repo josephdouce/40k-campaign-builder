@@ -4,6 +4,7 @@ import type { YsFetched } from "../game/index.ts";
 import { backendConfigured, dataClient } from "./backend.ts";
 import { firstError } from "./campaigns.ts";
 import type { GraphqlFailure } from "./campaigns.ts";
+import { localMode } from "./localMode.ts";
 
 const NOT_DEPLOYED = "Export isn't available yet: the backend update hasn't been deployed.";
 const OFFLINE = "Could not reach the server. Check your connection and try again.";
@@ -43,8 +44,24 @@ async function run(call: () => Promise<OpResult>): Promise<unknown> {
   return data;
 }
 
+/** Local dev mode: the Vite dev server runs the Lambda handler itself (see vite.config.ts). */
+async function viaDevServer(fieldName: string, args: Record<string, unknown>): Promise<OpResult> {
+  const res = await fetch("/__local/yellowscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fieldName, arguments: args }),
+  });
+  const body = (await res.json()) as { data?: unknown; error?: string };
+  return body.error ? { errors: [{ message: body.error }] } : { data: body.data };
+}
+
 /** Fetches the army behind a Yellowscribe code. */
 export async function fetchArmy(code: string): Promise<YsFetched> {
+  if (localMode) {
+    const parsed = parseFetched(await run(() => viaDevServer("yellowscribeArmy", { code })));
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.fetched;
+  }
   const c = client();
   const data = await run(() => c.queries.yellowscribeArmy({ code }));
   const parsed = parseFetched(data);
@@ -55,12 +72,13 @@ export async function fetchArmy(code: string): Promise<YsFetched> {
 /** Posts the edited units back and returns the new code. */
 export async function postArmy(fetched: YsFetched, units: Record<string, unknown>): Promise<string> {
   const { edition, order, modules, uiHeight, uiWidth, decorativeNames } = fetched;
-  const c = client();
-  const data = await run(() =>
-    c.mutations.yellowscribePost({
-      payload: JSON.stringify({ edition, order, units, modules, uiHeight, uiWidth, decorativeNames }),
-    }),
-  );
+  const payload = JSON.stringify({ edition, order, units, modules, uiHeight, uiWidth, decorativeNames });
+  const data = localMode
+    ? await run(() => viaDevServer("yellowscribePost", { payload }))
+    : await (() => {
+        const c = client();
+        return run(() => c.mutations.yellowscribePost({ payload }));
+      })();
   const code = typeof data === "object" && data !== null ? (data as { code?: unknown }).code : undefined;
   if (typeof code !== "string" || !code) throw new Error("The server did not return a code. Try again.");
   return code;

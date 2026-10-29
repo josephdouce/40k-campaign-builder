@@ -4,9 +4,11 @@ import { Amplify } from "aws-amplify";
 import { fetchAuthSession } from "aws-amplify/auth";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource.ts";
+import { localMode } from "./localMode.ts";
 
 const found = import.meta.glob("../../amplify_outputs.json", { eager: true, import: "default" });
-const outputs = Object.values(found)[0] as Parameters<typeof Amplify.configure>[0] | undefined;
+// Local dev mode ignores any amplify_outputs.json, so it never talks to AWS.
+const outputs = localMode ? undefined : (Object.values(found)[0] as Parameters<typeof Amplify.configure>[0] | undefined);
 
 export const backendConfigured = outputs !== undefined;
 
